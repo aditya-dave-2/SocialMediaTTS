@@ -161,6 +161,7 @@ cython_debug/
 
 
 #DATASET and Pickle Files
+tts_env/
 eval_data/
 Flicker8k_Dataset/
 Flickr8k_text/

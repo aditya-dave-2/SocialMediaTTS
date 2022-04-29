@@ -1,30 +1,16 @@
 import gradio as gr
 import numpy as np
 import os
-# tensorflow version
-import tensorflow
 
-# keras version
-import keras
 
-from os import listdir
-from pickle import dump
-from keras.applications.vgg16 import VGG16
-from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
 from keras.applications.vgg16 import preprocess_input
 from keras.models import Model
 
-from keras import Input, layers
-from keras import optimizers
-from tensorflow.keras.optimizers import Adam
 from keras.preprocessing import sequence
-from keras.preprocessing import image
-from keras.preprocessing.text import Tokenizer
+
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import LSTM, Embedding, Dense, Activation, Flatten, Reshape, Dropout
-from keras.layers.wrappers import Bidirectional
-from keras.layers.merge import add
+
 from keras.applications.inception_v3 import InceptionV3
 from keras.applications.inception_v3 import preprocess_input
 from keras.models import Model
@@ -32,9 +18,15 @@ from tensorflow.keras.utils import to_categorical
 from keras.models import load_model
 from PIL import Image
 import pickle
-
+from tts_file import get_audio_from_text
 
 def greedySearch(photo):
+    model = load_model('saved_model/comp_model.hdf5') #Make this smarter this isdumb
+    with open('wordtoix_dict.pkl','rb') as f:
+        wordtoix = pickle.load(f)
+    with open('ixtoword.pkl','rb') as f:
+        ixtoword = pickle.load(f)
+    max_length = 38
     in_text = 'startseq'
     for i in range(max_length):
         sequence = [wordtoix[w] for w in in_text.split() if w in wordtoix]
@@ -113,30 +105,21 @@ def encode(image):
 
 def image_prediction(image):
     image = encode(image).reshape((1,2048))
-
-    # print("Greedy Search:",greedySearch(image))
-    # print("Beam Search, K = 3:",beam_search_predictions(image, beam_index = 3))
-    # print("Beam Search, K = 5:",beam_search_predictions(image, beam_index = 5))
-    # print("Beam Search, K = 7:",beam_search_predictions(image, beam_index = 7))
-    # print("Beam Search, K = 10:",beam_search_predictions(image, beam_index = 10))
-    return beam_search_predictions(image, beam_index = 3)
-
-
-
-
-
+    return beam_search_predictions(image, beam_index = 10),greedySearch(image)
+    # return greedySearch(image)
 
 def greet(image):
 
-    t_op = image_prediction(image)
-    get_audio_file(t_op,"file")
-    return t_op,"a.wav"
+    t_op,t_op2 = image_prediction(image)
+    get_audio_from_text(t_op,"file")
+    get_audio_from_text(t_op2,"file2")
+    return t_op,"./file.wav",t_op2,"./file2.wav"
 
 
 demo = gr.Interface(
     fn=greet,
     inputs=["image"],
-    outputs=["text", "audio"],
+    outputs=[gr.outputs.Textbox(type="auto", label="Beam Search Output"),gr.outputs.Audio(type="auto", label="Beam Search Audio"),gr.outputs.Textbox(type="auto", label="Greedy Search Output"),gr.outputs.Audio(type="auto", label="Greedy Search Audio")],
 )
 if __name__ == "__main__":
     demo.launch()
